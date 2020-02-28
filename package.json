@@ -1,7 +1,7 @@
 {
   "name": "hex-dots",
   "version": "1.0.0",
-  "description": "Dots on a hexagonal grid made in Phaser 3",
+  "description": "Dots on a hexagonal grid. Made in Phaser 3",
   "main": "src/index.js",
   "scripts": {
     "build": "webpack --config webpack/prod.js ",

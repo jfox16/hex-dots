@@ -1,18 +1,30 @@
-import { Dot, state } from './Dot';
+import { Dot } from './Dot';
 
+/**
+ * DotGrid is a class that represents a hexagonal grid of dots.
+ */
 export class DotGrid {
+  /**
+   * Creates a new DotGrid, initializes its grid, and layout using input values.
+   * @param {Phaser.Scene} scene - The scene that this belongs to
+   * @param {number} numRows - The number of rows in the grid
+   * @param {number} numColumns - The number of columns in the grid
+   * @param {number} numColors - The number of colors to randomize dots with
+   * @param {number} centerX - The center x position of the grid in world position
+   * @param {number} centerY - The center y position of the grid in world position
+   * @param {number} maxWidth - The maximum width that the grid can expand to
+   * @param {number} maxHeight - The maximum height that the grid can expand to
+   */
   constructor(scene, numRows, numColumns, numColors, centerX, centerY, maxWidth, maxHeight) {
     this.scene = scene;
     this.numRows = numRows;
     this.numColumns = numColumns;
     this.numColors = numColors;
     
-    // INITIALIZE LAYOUT VALUES ===================================================================
-
-    // This ratio will set the cells in even hexagonal spacing.
+    // Set ratio to lay out cells in even hexagonal spacing.
     let widthToHeightRatio = (this.numColumns + 0.5) / (this.numRows * Math.cos(Math.PI/6));
 
-    // We want to fit the grid inside maxWidth and maxHeight, but we need to check
+    // We want to fit the grid inside maxWidth and maxHeight, but we need to first check
     // whether to scale by width or by height.
     if (widthToHeightRatio > maxWidth / maxHeight)  {
       // This means the grid is wider than than max dimensions, so scale by width.
@@ -29,8 +41,8 @@ export class DotGrid {
     this.cellDistanceY = this.height / this.numRows;
     this.dotScale = 0.8 * this.cellDistanceX / 128;
 
-    // INITIALIZE GRID CELLS ======================================================================
 
+    // Initialize grid cells
     this.grid = new Array(this.numRows);
 
     for (let r = 0; r < this.numRows; r++) {
@@ -38,7 +50,7 @@ export class DotGrid {
 
       for (let c = 0; c < this.numColumns; c++) {
 
-        // Find the right position for this cell in the hexagonal grid
+        // Find the world position for this cell in the hexagonal grid layout
         let cellX = centerX - this.width/2 + this.cellDistanceX * (c + 0.5);
         let cellY = centerY - this.height/2 + this.cellDistanceY * (r + 0.5);
 
@@ -53,15 +65,7 @@ export class DotGrid {
       }
     }
 
-    // INITIALIZE DOT DICTIONARY AND COLOR BUCKETS ================================================
-
-    this.colorBuckets = new Array(numColors);
-    for (let i = 0; i < this.colorBuckets.length; i++) {
-      this.colorBuckets[i] = [];
-    }
-
-    // INITIALIZE DOT GROUP FOR OBJECT POOLING ====================================================
-
+    // Initialize dot group (for object pooling)
     this.dotGroup = scene.add.group({
       defaultKey: 'dot',
       maxSize: numRows * numColumns * 2,
@@ -69,6 +73,7 @@ export class DotGrid {
       createCallback: (dot) => {
         dot.setName('dot' + this.dotGroup.getLength());
         dot.group = this.dotGroup;
+        dot.dotScale = this.dotScale;
       
         dot.on('pointerdown', () => {
           scene.dotClicked(dot);
@@ -77,35 +82,24 @@ export class DotGrid {
         dot.on('pointerover', () => {
           scene.dotHovered(dot);
         });
-
-        dot.setScale(this.dotScale);
       }
     });
   }
 
-  update() {
-    // animate all the dots
-    this.dotGroup.children.iterate((dot) => {
-      dot.moveOnPath();
-    });
-  }
-
-  removeAllDots() {
-    this.grid.forEach((row) => {
-      row.forEach((cell) => {
-        this.dotGroup.killAndHide(cell.dot);
-        cell.dot = null;
-      });
-    });
+  // Add a new randomized dot to every cell in the grid, removing old dots.
+  fillWithRandomDots() {
+    // reset colorBuckets
     this.colorBuckets = new Array(this.numColors);
     for (let i = 0; i < this.colorBuckets.length; i++) {
       this.colorBuckets[i] = [];
     }
-  }
-
-  fillWithRandomDots() {
+    // remove old dots and replace with a new dot with random color
     this.grid.forEach((row, r) => {
       row.forEach((cell, c) => {
+        if (cell.dot !== null) {
+          this.dotGroup.killAndHide(cell.dot);
+          cell.dot = null;
+        }
         let dot = this.addNewDot(cell.x, cell.y);
         dot.setGridPosition(r, c);
         this.grid[r][c].dot = dot;
@@ -113,68 +107,41 @@ export class DotGrid {
     });
   }
 
+  // Adds a new dot at world position (x, y). Returns the new dot, or null if no dot was available.
   addNewDot(x, y) {
     let dot = this.dotGroup.get(x, y);
     if (!dot) {
       console.error("No dots available!");
-      return;
+      return null;
     }
 
     // Add to matching color bucket
     dot.setColorId(Math.floor(Math.random() * this.numColors));
     dot.indexInColorBucket = this.colorBuckets[dot.colorId].push(dot) - 1;
-    dot.setState(state.NONE);
-    dot.setActive(true);
-    dot.setVisible(true);
-
-    // Do spawn animation
-    dot.setScale(0);
-    this.scene.tweens.add({
-      targets: dot,
-      scaleX: this.dotScale,
-      scaleY: this.dotScale,
-      ease: 'Bounce.out',
-      duration: 300,
-    });
+    dot.spawn();
     return dot;
   }
 
-  // Remove 
+  // Removes an array of dots from the grid and moves remaining dots downwards to fill the gaps.
+  // Also properly updates dotBuckets. Optimized for removing multiple dots at a time.
   removeDots(dots) {
     if (dots.length === 0) return;
+
     let colorId = dots[0].colorId;
 
-    // REMOVE THE DOTS ============================================================================
-
-    // columnLowestRowChanged is used to optimize dot replacement. It keeps track of columns that 
-    // have been changed and the bottom-most row in those columns that have been changed.
     let columnLowestRowChanged = {};
 
-    // Remove dots and leave nulls in grid and colorBucket to be replaced all at once (for optimization)
+    // Remove dots and leave nulls where they were referenced
     dots.forEach((dot) => {
       if (columnLowestRowChanged[dot.column] === undefined || columnLowestRowChanged[dot.column] < dot.row) {
         columnLowestRowChanged[dot.column] = dot.row;
       }
       this.colorBuckets[dot.colorId][dot.indexInColorBucket] = null;
       this.grid[dot.row][dot.column].dot = null;
-      
-
-      // Do disappear animation
-      this.scene.tweens.add({
-        targets: dot,
-        scaleX: 0,
-        scaleY: 0,
-        ease: 'Sine.easeIn',
-        duration: 100,
-      })
-      .setCallback('onComplete', () => {
-        this.dotGroup.killAndHide(dot);
-      }, []);
+      dot.despawn();
     });
 
-    // RESET THE GRID =============================================================================
-
-    // Move dots in the grid downward, moving nulls to the top
+    // Move dots downwards.
     Object.keys(columnLowestRowChanged).forEach((column) => {
       let lowestRowChanged = columnLowestRowChanged[column];
       column = Number(column);
@@ -216,7 +183,8 @@ export class DotGrid {
     // Remove the nulls from the end
     this.colorBuckets[colorId] = colorBucket.slice(0, numDots);
 
-    // ADD NEW CELLS ==============================================================================
+
+    // REPLACE REMOVED CELLS ======================================================================
 
     this.grid.forEach((row, r) => {
       let delay = 300 + (r / this.numRows) * 700;
@@ -258,7 +226,7 @@ export class DotGrid {
     return false;
   }
 
-  // Uses a curve and tween to animate the dot moving down to a new row
+  // Uses a curve and tween to animate the dot moving down to a new row.
   moveDotToRow(dot, originalRow, targetRow) {
     let points = [];
     let c = dot.column;
@@ -269,23 +237,10 @@ export class DotGrid {
 
     let path = new Phaser.Curves.Path(this.grid[originalRow][c].x, this.grid[originalRow][c].y);
     path.splineTo(points);
-
-    dot.path = path;
-    dot.t = 0;
-
-    // Use tween to animate movement on path
-    this.scene.tweens.add({
-      targets: dot,
-      t: 1,
-      ease: 'Bounce.out',
-      duration: 700
-    })
-    .setCallback('onComplete', () => {
-      dot.t = -1;
-    }, []);
+    dot.startFall(path);
   }
 
-  // This uses a spline to draw curves that separate the columns
+  // Draw curves on the scene to separate columns.
   drawColumnLines() {
     let baseX = this.grid[0][0].x;
     let baseY = this.grid[0][0].y;
@@ -297,14 +252,14 @@ export class DotGrid {
       points.push(this.grid[r][0].y - baseY);
     }
 
-    // Then we draw that curve once for each column.
+    // Draw that curve once for each column.
     let curve = new Phaser.Curves.Spline(points);
     for (let c = 0; c < this.numColumns+1; c++) {
       let graphics = this.scene.add.graphics({
         x: baseX + c * this.cellDistanceX,
-        y: baseY,
-        depth: -9
+        y: baseY
       });
+      graphics.setDepth(-9);
       graphics.lineStyle(8, 0x333333);
       curve.draw(graphics, (this.numRows-1) * 8);
     }

@@ -1,19 +1,26 @@
 import { constants } from "../constants";
+import { UiHandler } from '../classes/UiHandler';
 import { DotGrid } from '../classes/DotGrid';
-import { Dot, state as dotState } from '../classes/Dot';
-import { TextDisplay } from '../classes/TextDisplay';
-import { TimerDisplay } from '../classes/TimerDisplay'; 
-import { Button } from "../classes/Button";
+import { DOT_STATE, DOT_COLORS } from '../classes/Dot';
 import { DotEffect } from "../classes/DotEffect";
 
-const NUM_ROWS       = 6;
-const NUM_COLUMNS    = 8;
-const NUM_COLORS     = 6;
-const MIN_LOOP_COUNT = 3; 
-const ROUND_TIME     = 60000;
+export const GAME_STATE = {
+  START: 0,
+  RUNNING: 1,
+  OVER: 2
+}
 
+export const GAME_CONSTANTS = {
+  NUM_ROWS:  6,
+  NUM_COLUMNS: 8,
+  NUM_COLORS: 7,
+  MIN_LOOP_COUNT: 3,
+  ROUND_TIME: 60000
+}
 
-
+/**
+ * GameScene is the scene for the main game. Operates using 3 states: Start, Running, and Over
+ */
 export class GameScene extends Phaser.Scene {
   
   constructor() {  
@@ -26,23 +33,25 @@ export class GameScene extends Phaser.Scene {
 
   preload() {
     this.canvas = this.sys.game.canvas;
+    this.pointer = this.input.activePointer;
+    this.input.on('pointerup', () => this.pointerUp());
+    this.points = 0;
 
     // Initialize dot grid
     this.dotGrid = new DotGrid(
       this, 
-      NUM_ROWS, 
-      NUM_COLUMNS, 
-      NUM_COLORS, 
+      GAME_CONSTANTS.NUM_ROWS, 
+      GAME_CONSTANTS.NUM_COLUMNS, 
+      GAME_CONSTANTS.NUM_COLORS, 
       this.canvas.width/2, 
-      this.canvas.height/2 + 25, 
+      this.canvas.height/2 + 50, 
       750, 
-      550
+      500
     );
 
-    // selection holds info on currently selected dots
+    // Initialize selection to keep track of currently selected dots
     this.selection = {
       selected: [],
-      selectedLines: [],
       colorId: 0,
       loop: false
     };
@@ -50,126 +59,36 @@ export class GameScene extends Phaser.Scene {
     // Make a group for object-pooling dot effects
     this.dotEffectGroup = this.add.group({
       defaultKey: 'dotEffect',
-      maxSize: NUM_ROWS * NUM_COLUMNS,
+      maxSize: GAME_CONSTANTS.NUM_ROWS * GAME_CONSTANTS.NUM_COLUMNS,
       classType: DotEffect,
       createCallback: (dotEffect) => {
         dotEffect.setName('dotEffect' + this.dotEffectGroup.getLength());
         dotEffect.group = this.dotEffectGroup;
       }
     });
-
-    this.pointer = this.input.activePointer;
-    this.input.on('pointerup', () => this.pointerUp());
-    this.points = 0;
   }
 
   create() {
     // Add Background
     this.add.image(0, 0, "gradient-bg").setOrigin(0,0).setDepth(-10);
 
+    // Line graphics
+    this.selectedLinesGraphics = this.add.graphics();
+    this.selectedLinesGraphics.setDepth(-1);
+    this.pointerLineGraphics = this.add.graphics();
+    this.pointerLineGraphics.setDepth(-1);
+
     // Dot Grid
     this.dotGrid.drawColumnLines();
     this.dotGrid.fillWithRandomDots();
 
-    // Line graphics
-    this.selectedLinesGraphics = this.add.graphics();
-    this.pointerLineGraphics = this.add.graphics();
-
-    // Initialize UI Elements
-    // This is a dictionary containing a separate array of UI elements for each game state.
-    // Their visibility is handled in this.setState().
-    this.uiElements = {};
-
-    // UI elements: Start Screen
-    let startOverlay = this.add.rectangle(
-      this.canvas.width/2,
-      this.canvas.height/2,
-      this.canvas.width,
-      this.canvas.height,
-      0x000000,
-      100
-    );
-    startOverlay.on('pointerdown', () => { this.setState(constants.GAME_STATE.RUNNING) });
-    startOverlay.setInteractive();
-
-    let titleText = this.add.bitmapText(this.canvas.width/2, this.canvas.height/2 - 100, 'bloggerSans', 'H E X D O T S', 115);
-    titleText.setOrigin(0.5, 0.5);
-
-    let startText = this.add.bitmapText(this.canvas.width/2, this.canvas.height/2 + 50, 'bloggerSans', 'Click to Start', 64);
-    startText.setOrigin(0.5, 0.5);
-
-    this.uiElements[constants.GAME_STATE.START] = [
-      startOverlay,
-      titleText,
-      startText
-    ];
-
-
-    // UI Elements: While game is running
-    this.timerDisplay = this.add.bitmapText(this.canvas.width/2, 32, 'bloggerSansBold', Math.floor(ROUND_TIME/1000), 64);
-    this.timerDisplay.setOrigin(0.5, 0.5);
-
-    this.pointsDisplay = this.add.bitmapText(48, 32, 'bloggerSansBold', 0, 48);
-    this.pointsDisplay.setOrigin(0, 0.5);
-
-    this.colorOverlay = this.add.rectangle(
-      this.canvas.width/2,
-      this.canvas.height/2,
-      this.canvas.width,
-      this.canvas.height,
-      0xffffff,
-      250
-    ),
-
-    this.uiElements[constants.GAME_STATE.RUNNING] = [
-      this.pointsDisplay,
-      this.timerDisplay,
-      this.colorOverlay
-    ]
-
-
-    // UI Elements: Game Over screen
-    let gameOverOverlay = this.add.rectangle(
-      this.canvas.width/2,
-      this.canvas.height/2,
-      this.canvas.width,
-      this.canvas.height,
-      0x000000,
-      100
-    );
-
-    let timesUp = this.add.bitmapText(this.canvas.width/2, 140, 'bloggerSansBold', "Time's Up!", 100);
-    timesUp.setOrigin(0.5, 0.5);
-
-    this.yourScore = this.add.bitmapText(this.canvas.width/2, 260, 'bloggerSans', "Your Score:", 80);
-    this.yourScore.setOrigin(0.5, 0.5);
-
-    let restartButton = new Button(this, 250, 425, 170, 60, 'Restart');
-    restartButton.rectangle.on('pointerdown', () => this.restart());
-
-    let exitButton = new Button(this, 550, 425, 170, 60, 'Exit');
-    exitButton.rectangle.on('pointerdown', () => this.exit());
-
-    this.uiElements[constants.GAME_STATE.OVER] = [
-      gameOverOverlay,
-      timesUp,
-      this.yourScore,
-      restartButton,
-      exitButton
-    ];
-
-    // Start with all UI hidden
-    Object.values(this.uiElements).forEach((elements) => {
-      elements.forEach((element) => {
-        element.setVisible(false);
-      });
-    });
-
-    this.setState(constants.GAME_STATE.START);
+    // UI Handler
+    this.uiHandler = new UiHandler(this, this.canvas);
+    this.setState(GAME_STATE.START);
   }
 
   update() {
-    this.dotGrid.update();
+    this.dotGrid.dotGroup.children.iterate(dot => dot.update());
     this.updatePointerLine();
     this.updateTimerDisplay();
   }
@@ -177,45 +96,35 @@ export class GameScene extends Phaser.Scene {
   // MAIN METHODS =================================================================================
 
   setState(state) {
-    // hide previous state UI
-    if (this.uiElements[this.state]) {
-      this.uiElements[this.state].forEach((element) => {
-        element.setVisible(false);
-      });
-    }
-
-    // show new state UI
-    this.uiElements[state].forEach((element) => {
-      element.setVisible(true);
-    });
-
+    this.uiHandler.changeState(this.state, state);
     this.state = state;
 
     switch(state) {
-      case constants.GAME_STATE.RUNNING:
-        this.dotGrid.removeAllDots();
+      case GAME_STATE.RUNNING:
         this.dotGrid.fillWithRandomDots();
-        this.endTime = this.time.now + ROUND_TIME + 900;
+        this.endTime = this.time.now + GAME_CONSTANTS.ROUND_TIME + 900;
         this.points = 0;
         this.updateColorOverlay();
         break;
 
-      case constants.GAME_STATE.OVER:
+      case GAME_STATE.OVER:
+        this.uiHandler.yourScore.setText("Your Score: " + this.points);
         this.pointerUp();
         this.selection.selected = [];
         this.selection.loop = false;
-        this.yourScore.setText("Your Score: " + this.points);
+        this.updateSelectedLines();
+        this.updatePointerLine();
         this.updateColorOverlay();
         break;
     }
   }
 
   dotClicked(dot) {
-    if (this.state !== constants.GAME_STATE.RUNNING) return;
+    if (this.state !== GAME_STATE.RUNNING) return;
 
     let selected = this.selection.selected;
     if (selected.length === 0) {
-      dot.setState(dotState.SELECTED);
+      dot.setState(DOT_STATE.SELECTED);
       selected.push(dot);
       this.selection.colorId = dot.colorId;
       this.addDotEffect(dot.x, dot.y, dot.colorId);
@@ -223,7 +132,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   dotHovered(dot) {
-    if (this.state !== constants.GAME_STATE.RUNNING) return;
+    if (this.state !== GAME_STATE.RUNNING) return;
 
     // Only check a hovered dot if a selection has been started and the dot is adjacent to last selected dot.
     let selected = this.selection.selected;
@@ -232,12 +141,12 @@ export class GameScene extends Phaser.Scene {
     // If this dot is unselected and has the same color as selection, add it to selection.
     if (
       selected.length > 0 
-      && dot.state !== dotState.SELECTED 
+      && dot.state !== DOT_STATE.SELECTED 
       && dot.colorId === this.selection.colorId
       && this.dotGrid.checkAdjacent(dot, selected[selected.length-1])
       && !this.selection.loop
     ) {
-      dot.setState(dotState.SELECTED);
+      dot.setState(DOT_STATE.SELECTED);
       selected.push(dot);
       this.addDotEffect(dot.x, dot.y, dot.colorId);
     }
@@ -248,32 +157,32 @@ export class GameScene extends Phaser.Scene {
         this.selection.loop = false;
       }
       else {
-        selected[selected.length-1].setState(dotState.NONE);
+        selected[selected.length-1].setState(DOT_STATE.NONE);
       }
       selected.pop();
       this.selection.loop = false;
     }
     // If this dot is the same as the first selected dot and enough dots are selected
     // for a loop, add it and set loop to true.
-    else if (selected.length > MIN_LOOP_COUNT - 1 && dot === selected[0]) {
+    else if (selected.length > GAME_CONSTANTS.MIN_LOOP_COUNT - 1 && dot === selected[0]) {
       selected.push(dot);
       this.selection.loop = true;
       this.addDotEffect(dot.x, dot.y, dot.colorId);
     }
 
-    // Draw lines representing selected dots
+    // Update visualizations that could have changed
     this.updateColorOverlay();
     this.updateSelectedLines();
   }
 
   pointerUp() {
-    if (this.state !== constants.GAME_STATE.RUNNING) return;
+    if (this.state !== GAME_STATE.RUNNING) return;
 
     let selected = this.selection.selected;
     if (selected.length === 0) return;
 
     if (selected.length === 1) {
-      selected[0].setState(dotState.NONE);
+      selected[0].setState(DOT_STATE.NONE);
     }
     else if (this.selection.loop) {
       let numRemoved = this.dotGrid.removeAllDotsWithColorId(this.selection.colorId);
@@ -284,14 +193,14 @@ export class GameScene extends Phaser.Scene {
       this.dotGrid.removeDots(selected);
       this.points += selected.length;
     }
-    this.pointsDisplay.setText(this.points);
+    this.uiHandler.pointsDisplay.setText(this.points);
     this.selection.selected = [];
     this.updateColorOverlay();
     this.updateSelectedLines();
   }
 
   restart() {
-    this.setState(constants.GAME_STATE.RUNNING);
+    this.setState(GAME_STATE.RUNNING);
   }
 
   exit() {
@@ -301,29 +210,33 @@ export class GameScene extends Phaser.Scene {
   // VISUALIZATION METHODS ========================================================================
 
   updateTimerDisplay() {
-    if (this.state === constants.GAME_STATE.RUNNING) {
+    if (this.state === GAME_STATE.RUNNING) {
       // Update timer display
       if (this.endTime) {
         let timeLeft = this.endTime - this.time.now;
         let secondsLeft;
         if (this.time.now > this.endTime) {
-          this.setState(constants.GAME_STATE.OVER);
+          this.setState(GAME_STATE.OVER);
           secondsLeft = 0;
         }
         else {
           secondsLeft = Math.floor(timeLeft/1000);
         }
-        this.timerDisplay.text = secondsLeft;
+        this.uiHandler.timerDisplay.text = secondsLeft;
       }
     }
   }
 
   updatePointerLine() {
-    let selected = this.selection.selected;
     let graphics = this.pointerLineGraphics;
     graphics.clear();
+
+    let selected = this.selection.selected;
+    if ( selected.length === 0 || this.selection.loop ) return;
+    if ( this.pointer.x === 0 || this.pointer.y === 0 ) return; // fix for mobile
+
     if (selected.length > 0 && !this.selection.loop) {
-      graphics.lineStyle(5, constants.COLORS[this.selection.colorId]._color);
+      graphics.lineStyle(5, DOT_COLORS[this.selection.colorId]._color);
       graphics.beginPath();
       graphics.moveTo(selected[selected.length-1].x, selected[selected.length-1].y);
       graphics.lineTo(this.pointer.x, this.pointer.y);
@@ -336,7 +249,7 @@ export class GameScene extends Phaser.Scene {
     let graphics = this.selectedLinesGraphics;
     graphics.clear();
     if (selected.length > 1) {
-      graphics.lineStyle(5, constants.COLORS[this.selection.colorId]._color);
+      graphics.lineStyle(5, DOT_COLORS[this.selection.colorId]._color);
       graphics.beginPath();
       graphics.moveTo(selected[0].x, selected[0].y);
       for (let i = 1; i < selected.length; i++) {
@@ -348,17 +261,22 @@ export class GameScene extends Phaser.Scene {
 
   // Color overlay turns on and changes to the selected color when you've made a loop.
   updateColorOverlay() {
+    let colorOverlay = this.uiHandler.colorOverlay;
     if (this.selection.loop) {
-      this.colorOverlay.fillColor = constants.COLORS[this.selection.colorId]._color;
-      this.colorOverlay.setVisible(true);
+      colorOverlay.fillColor = DOT_COLORS[this.selection.colorId]._color;
+      colorOverlay.setVisible(true);
     }
     else {
-      this.colorOverlay.setVisible(false);
+      colorOverlay.setVisible(false);
     }
   }
 
   addDotEffect(x, y, colorId) {
     let dotEffect = this.dotEffectGroup.get(x, y);
+    if (!dotEffect) {
+      console.error("No DotEffect available!");
+      return null;
+    }
     dotEffect.dotScale = this.dotGrid.dotScale;
     dotEffect.setColorId(colorId);
     dotEffect.spawn();

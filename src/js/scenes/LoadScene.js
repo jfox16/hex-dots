@@ -21,6 +21,13 @@ export class LoadScene extends Phaser.Scene {
     this.load.image('dot', dotImg);
     this.load.bitmapFont('bloggerSans', bloggerSansTexture, bloggerSansXml);
     this.load.bitmapFont('bloggerSansBold', bloggerSansBoldTexture, bloggerSansBoldXml);
+
+    this.add.text(
+      this.sys.game.canvas.width/2, 
+      this.sys.game.canvas.height/2 - 100,
+      'Loading...', 
+      64
+    ).setOrigin(0.5, 0.5);
   
     // Loading Bar
     let loadingBar = this.add.graphics({

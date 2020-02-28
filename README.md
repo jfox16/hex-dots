@@ -1,6 +1,10 @@
-# Phaser 3 Webpack Project Template
+# HexDots
 
-A Phaser 3 project template with ES6 support via [Babel 7](https://babeljs.io/) and [Webpack 4](https://webpack.js.org/)
+A Phaser 3 game based on Dots, but using a hexagonal grid.
+
+[Original Dots Gameplay](https://www.youtube.com/watch?v=2X1s4aMSUrE)
+
+Built with [Phaser 3 Project Template](https://github.com/photonstorm/phaser3-project-template): a Phaser 3 project template with ES6 support via [Babel 7](https://babeljs.io/) and [Webpack 4](https://webpack.js.org/)
 that includes hot-reloading for development and production-ready builds.
 
 Loading images via JavaScript module `import` is also supported.
