@@ -10,8 +10,9 @@ const NUM_ROWS       = 6;
 const NUM_COLUMNS    = 8;
 const NUM_COLORS     = 6;
 const MIN_LOOP_COUNT = 3; 
-// const ROUND_TIME     = 60000;
-const ROUND_TIME     = 0;
+const ROUND_TIME     = 60000;
+
+
 
 export class GameScene extends Phaser.Scene {
   
@@ -137,10 +138,10 @@ export class GameScene extends Phaser.Scene {
       100
     );
 
-    let timesUp = this.add.bitmapText(this.canvas.width/2, 120, 'bloggerSansBold', "Time's Up!", 100);
+    let timesUp = this.add.bitmapText(this.canvas.width/2, 140, 'bloggerSansBold', "Time's Up!", 100);
     timesUp.setOrigin(0.5, 0.5);
 
-    this.yourScore = this.add.bitmapText(this.canvas.width/2, 250, 'bloggerSans', "Your Score:", 80);
+    this.yourScore = this.add.bitmapText(this.canvas.width/2, 260, 'bloggerSans', "Your Score:", 80);
     this.yourScore.setOrigin(0.5, 0.5);
 
     let restartButton = new Button(this, 250, 425, 170, 60, 'Restart');
