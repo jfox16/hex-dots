@@ -11,6 +11,12 @@ that includes hot-reloading for development and production-ready builds.
 
 [Node.js](https://nodejs.org) is required to install dependencies and run scripts via `npm`.
 
+## How to Play
+
+* Drag across dots of the same to clear them.
+* Making a loop will clear all dots of that color.
+* Clear as many dots as you can within the time limit!
+
 ## How to Run
 
 1. `npm install`
