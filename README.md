@@ -19,7 +19,7 @@ that includes hot-reloading for development and production-ready builds.
 
 ## How to Run
 
-Click the "Play it here!" link above
+1. Click the "Play it here!" link above
 
 OR
 
