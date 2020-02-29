@@ -19,6 +19,10 @@ that includes hot-reloading for development and production-ready builds.
 
 ## How to Run
 
+Click the "Play it here!" link above
+
+OR
+
 1. `npm install`
 2. `npm start`
 3. Open localhost:8080 in a web browser
