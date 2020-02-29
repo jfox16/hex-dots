@@ -13,7 +13,7 @@ that includes hot-reloading for development and production-ready builds.
 
 ## How to Play
 
-* Drag across dots of the same to clear them.
+* Drag across dots of the same color to clear them.
 * Making a loop will clear all dots of that color.
 * Clear as many dots as you can within the time limit!
 
