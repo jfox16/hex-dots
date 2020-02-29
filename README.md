@@ -1,5 +1,7 @@
 # HexDots
 
+## [🎮 Play it here](https://hex-dots.herokuapp.com/)
+
 A Phaser 3 game based on Dots, but using a hexagonal grid.
 
 [Original Dots Gameplay](https://www.youtube.com/watch?v=2X1s4aMSUrE)
