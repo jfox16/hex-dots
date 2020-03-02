@@ -25,9 +25,9 @@ that includes hot-reloading for development and production-ready builds.
 
 OR
 
-1. `npm install`
-2. `npm start`
-3. Open localhost:8080 in a web browser
-4. Have fun!
+1. Clone this repository and navigate to it.
+2. `npm install`
+3. `npm start`
+4. Open localhost:8080 in a web browser
 
 
