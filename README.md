@@ -2,7 +2,7 @@
 
 ## [👉 Play it here! 🎮](https://hex-dots.herokuapp.com/)
 
-![](hexdots-gameplay)
+![](hexdots-gameplay.gif)
 
 A [Phaser 3](https://phaser.io/phaser3) game based on [Dots](https://www.youtube.com/watch?v=2X1s4aMSUrE), but with a hexagonal grid.
 
