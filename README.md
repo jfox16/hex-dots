@@ -30,4 +30,9 @@ OR
 3. `npm start`
 4. Open localhost:8080 in a web browser. (this should happen automatically)
 
+## Resources Used
+
+* [Phaser 3 Project Template](https://github.com/photonstorm/phaser3-project-template)
+* [Blogger Font](https://www.fontfabric.com/fonts/blogger/)
+
 
