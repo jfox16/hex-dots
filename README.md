@@ -28,6 +28,6 @@ OR
 1. Clone this repository and navigate to it.
 2. `npm install`
 3. `npm start`
-4. Open localhost:8080 in a web browser
+4. Open localhost:8080 in a web browser. (this should happen automatically)
 
 
