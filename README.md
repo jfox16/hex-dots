@@ -1,4 +1,4 @@
-# HexDots
+# Hex Dots
 
 ## [👉 Play it here! 🎮](https://hex-dots.herokuapp.com/)
 
