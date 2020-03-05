@@ -6,15 +6,15 @@
 
 A [Phaser 3](https://phaser.io/phaser3) game based on [Dots](https://www.youtube.com/watch?v=2X1s4aMSUrE), but with a hexagonal grid.
 
-## Requirements
-
-[Node.js](https://nodejs.org) is required to install dependencies and run scripts via `npm`.
-
 ## How to Play
 
 * Drag across dots of the same color to clear them.
 * Making a loop will clear all dots of that color.
 * Clear as many dots as you can within the time limit!
+
+## Requirements
+
+[Node.js](https://nodejs.org) is required to install dependencies and run scripts via `npm`.
 
 ## How to Run
 
